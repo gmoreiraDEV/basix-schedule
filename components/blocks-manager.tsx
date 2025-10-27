@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { mockProfessionals } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -10,6 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Plus, Trash2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+
+interface Professional {
+  id: string
+  name: string
+}
 
 interface Block {
   id: string
@@ -20,6 +24,7 @@ interface Block {
 }
 
 export function BlocksManager() {
+  const [professionals, setProfessionals] = useState<Professional[]>([])
   const [selectedProfessional, setSelectedProfessional] = useState<string>("")
   const [blocks, setBlocks] = useState<Block[]>([])
   const [newBlock, setNewBlock] = useState({
@@ -29,9 +34,33 @@ export function BlocksManager() {
     reason: "",
   })
 
+  useEffect(() => {
+    fetch("/api/professionals")
+      .then((res) => res.json())
+      .then((data) => setProfessionals(data))
+      .catch((err) => console.error("[v0] Error fetching professionals:", err))
+  }, [])
+
+  useEffect(() => {
+    if (selectedProfessional) {
+      fetch(`/api/blocks?professionalId=${selectedProfessional}`)
+        .then((res) => res.json())
+        .then((data) =>
+          setBlocks(
+            data.map((b: any) => ({
+              ...b,
+              startTime: new Date(b.startTime),
+              endTime: new Date(b.endTime),
+            })),
+          ),
+        )
+        .catch((err) => console.error("[v0] Error fetching blocks:", err))
+    }
+  }, [selectedProfessional])
+
   const professionalBlocks = blocks.filter((b) => b.professionalId === selectedProfessional)
 
-  const handleAddBlock = () => {
+  const handleAddBlock = async () => {
     if (!selectedProfessional || !newBlock.date) return
 
     const startDateTime = new Date(`${newBlock.date}T${newBlock.startTime}`)
@@ -42,29 +71,56 @@ export function BlocksManager() {
       return
     }
 
-    const block: Block = {
-      id: `block-${Date.now()}`,
-      professionalId: selectedProfessional,
-      startTime: startDateTime,
-      endTime: endDateTime,
-      reason: newBlock.reason,
+    try {
+      const response = await fetch("/api/blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          professionalId: selectedProfessional,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString(),
+          reason: newBlock.reason,
+        }),
+      })
+
+      if (response.ok) {
+        const savedBlock = await response.json()
+        setBlocks([
+          ...blocks,
+          {
+            ...savedBlock,
+            startTime: new Date(savedBlock.startTime),
+            endTime: new Date(savedBlock.endTime),
+          },
+        ])
+
+        // Reset form
+        setNewBlock({
+          date: "",
+          startTime: "09:00",
+          endTime: "10:00",
+          reason: "",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error adding block:", error)
+      alert("Erro ao adicionar bloqueio")
     }
-
-    setBlocks([...blocks, block])
-    console.log("[v0] Block added:", block)
-
-    // Reset form
-    setNewBlock({
-      date: "",
-      startTime: "09:00",
-      endTime: "10:00",
-      reason: "",
-    })
   }
 
-  const handleDeleteBlock = (blockId: string) => {
-    setBlocks(blocks.filter((b) => b.id !== blockId))
-    console.log("[v0] Block deleted:", blockId)
+  const handleDeleteBlock = async (blockId: string) => {
+    try {
+      const response = await fetch(`/api/blocks/${blockId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setBlocks(blocks.filter((b) => b.id !== blockId))
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting block:", error)
+      alert("Erro ao deletar bloqueio")
+    }
   }
 
   const formatDateTime = (date: Date) => {
@@ -87,7 +143,7 @@ export function BlocksManager() {
             <SelectValue placeholder="Escolha um profissional" />
           </SelectTrigger>
           <SelectContent>
-            {mockProfessionals.map((prof) => (
+            {professionals.map((prof) => (
               <SelectItem key={prof.id} value={prof.id}>
                 {prof.name}
               </SelectItem>

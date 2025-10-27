@@ -4,26 +4,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Calendar, Users, Briefcase, Clock } from "lucide-react"
 import Link from "next/link"
-import { mockBookings, mockServices, mockProfessionals } from "@/lib/mock-data"
+
+async function getDashboardStats() {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/dashboard/stats`, {
+    cache: "no-store",
+    headers: {
+      Cookie: "", // Will be populated by Next.js automatically
+    },
+  })
+
+  if (!res.ok) {
+    return {
+      stats: { todayBookings: 0, totalBookings: 0, activeServices: 0, activeProfessionals: 0 },
+      upcomingBookings: [],
+    }
+  }
+
+  return res.json()
+}
 
 export default async function DashboardPage() {
   const user = await requireAuth()
-
-  // Calculate stats
-  const todayBookings = mockBookings.filter((b) => {
-    const today = new Date()
-    const bookingDate = new Date(b.startTime)
-    return (
-      bookingDate.getDate() === today.getDate() &&
-      bookingDate.getMonth() === today.getMonth() &&
-      bookingDate.getFullYear() === today.getFullYear()
-    )
-  })
-
-  const upcomingBookings = mockBookings
-    .filter((b) => new Date(b.startTime) > new Date())
-    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-    .slice(0, 5)
+  const { stats, upcomingBookings } = await getDashboardStats()
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{todayBookings.length}</div>
+              <div className="text-2xl font-bold">{stats.todayBookings}</div>
               <p className="text-xs text-muted-foreground">Confirmados para hoje</p>
             </CardContent>
           </Card>
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockBookings.length}</div>
+              <div className="text-2xl font-bold">{stats.totalBookings}</div>
               <p className="text-xs text-muted-foreground">No sistema</p>
             </CardContent>
           </Card>
@@ -64,7 +66,7 @@ export default async function DashboardPage() {
               <Briefcase className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockServices.filter((s) => s.active).length}</div>
+              <div className="text-2xl font-bold">{stats.activeServices}</div>
               <p className="text-xs text-muted-foreground">Disponíveis</p>
             </CardContent>
           </Card>
@@ -75,7 +77,7 @@ export default async function DashboardPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockProfessionals.filter((p) => p.active).length}</div>
+              <div className="text-2xl font-bold">{stats.activeProfessionals}</div>
               <p className="text-xs text-muted-foreground">Ativos</p>
             </CardContent>
           </Card>
@@ -128,9 +130,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-muted-foreground text-center py-8">Nenhum agendamento próximo</p>
             ) : (
               <div className="space-y-4">
-                {upcomingBookings.map((booking) => {
-                  const service = mockServices.find((s) => s.id === booking.serviceId)
-                  const professional = mockProfessionals.find((p) => p.id === booking.professionalId)
+                {upcomingBookings.map((booking: any) => {
                   const startTime = new Date(booking.startTime)
 
                   return (
@@ -141,7 +141,7 @@ export default async function DashboardPage() {
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{booking.clientName}</p>
                         <p className="text-sm text-muted-foreground">
-                          {service?.name} • {professional?.name}
+                          {booking.service.name} • {booking.professional.name}
                         </p>
                       </div>
                       <div className="text-right">

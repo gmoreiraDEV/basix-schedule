@@ -1,15 +1,47 @@
 "use client"
 
-import { useState } from "react"
-import { mockServices } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+interface Service {
+  id: string
+  name: string
+  description: string | null
+  duration: number
+  price: number
+  active: boolean
+}
+
 export function ServicesTable() {
-  const [services] = useState(mockServices)
+  const [services, setServices] = useState<Service[]>([])
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((res) => res.json())
+      .then((data) => setServices(data))
+      .catch((err) => console.error("[v0] Error fetching services:", err))
+  }, [])
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja deletar este serviço?")) return
+
+    try {
+      const response = await fetch(`/api/services/${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setServices(services.filter((s) => s.id !== id))
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting service:", error)
+      alert("Erro ao deletar serviço")
+    }
+  }
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -64,7 +96,7 @@ export function ServicesTable() {
                         <Edit className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(service.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

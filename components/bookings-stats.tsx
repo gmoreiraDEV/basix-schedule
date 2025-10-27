@@ -1,18 +1,30 @@
 "use client"
 
-import { mockBookings } from "@/lib/mock-data"
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, CheckCircle, XCircle, Clock } from "lucide-react"
 
-export function BookingsStats() {
-  const now = new Date()
+interface BookingStats {
+  total: number
+  confirmed: number
+  cancelled: number
+  upcoming: number
+}
 
-  const stats = {
-    total: mockBookings.length,
-    confirmed: mockBookings.filter((b) => b.status === "confirmed").length,
-    cancelled: mockBookings.filter((b) => b.status === "cancelled").length,
-    upcoming: mockBookings.filter((b) => new Date(b.startTime) > now && b.status === "confirmed").length,
-  }
+export function BookingsStats() {
+  const [stats, setStats] = useState<BookingStats>({
+    total: 0,
+    confirmed: 0,
+    cancelled: 0,
+    upcoming: 0,
+  })
+
+  useEffect(() => {
+    fetch("/api/bookings/stats")
+      .then((res) => res.json())
+      .then((data) => setStats(data))
+      .catch((err) => console.error("[v0] Error fetching booking stats:", err))
+  }, [])
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

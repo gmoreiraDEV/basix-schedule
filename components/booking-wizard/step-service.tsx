@@ -1,9 +1,18 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import type { BookingData } from "@/components/booking-wizard"
-import { mockServices } from "@/lib/mock-data"
 import { Card } from "@/components/ui/card"
 import { Check, Clock, DollarSign } from "lucide-react"
+
+interface Service {
+  id: string
+  name: string
+  description: string | null
+  duration: number
+  price: number
+  active: boolean
+}
 
 interface StepServiceProps {
   bookingData: BookingData
@@ -11,9 +20,16 @@ interface StepServiceProps {
 }
 
 export function StepService({ bookingData, updateBookingData }: StepServiceProps) {
-  const activeServices = mockServices.filter((s) => s.active)
+  const [services, setServices] = useState<Service[]>([])
 
-  const handleSelectService = (service: (typeof mockServices)[0]) => {
+  useEffect(() => {
+    fetch("/api/services")
+      .then((res) => res.json())
+      .then((data) => setServices(data.filter((s: Service) => s.active)))
+      .catch((err) => console.error("[v0] Error fetching services:", err))
+  }, [])
+
+  const handleSelectService = (service: Service) => {
     updateBookingData({
       serviceId: service.id,
       serviceName: service.name,
@@ -44,7 +60,7 @@ export function StepService({ bookingData, updateBookingData }: StepServiceProps
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {activeServices.map((service) => {
+        {services.map((service) => {
           const isSelected = bookingData.serviceId === service.id
 
           return (
@@ -83,7 +99,7 @@ export function StepService({ bookingData, updateBookingData }: StepServiceProps
         })}
       </div>
 
-      {activeServices.length === 0 && (
+      {services.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
           <p>Nenhum serviço disponível no momento</p>
         </div>

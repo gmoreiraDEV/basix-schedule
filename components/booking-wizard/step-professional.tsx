@@ -1,9 +1,17 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import type { BookingData } from "@/components/booking-wizard"
-import { mockProfessionals, mockServiceProfessionals } from "@/lib/mock-data"
 import { Card } from "@/components/ui/card"
 import { Check, User } from "lucide-react"
+
+interface Professional {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  active: boolean
+}
 
 interface StepProfessionalProps {
   bookingData: BookingData
@@ -11,15 +19,18 @@ interface StepProfessionalProps {
 }
 
 export function StepProfessional({ bookingData, updateBookingData }: StepProfessionalProps) {
-  // Filter professionals who can perform the selected service
-  const availableProfessionals = mockProfessionals.filter((prof) => {
-    if (!prof.active) return false
-    return mockServiceProfessionals.some(
-      (sp) => sp.professionalId === prof.id && sp.serviceId === bookingData.serviceId,
-    )
-  })
+  const [professionals, setProfessionals] = useState<Professional[]>([])
 
-  const handleSelectProfessional = (professional: (typeof mockProfessionals)[0]) => {
+  useEffect(() => {
+    if (bookingData.serviceId) {
+      fetch(`/api/professionals/${bookingData.serviceId}/services`)
+        .then((res) => res.json())
+        .then((data) => setProfessionals(data))
+        .catch((err) => console.error("[v0] Error fetching professionals:", err))
+    }
+  }, [bookingData.serviceId])
+
+  const handleSelectProfessional = (professional: Professional) => {
     updateBookingData({
       professionalId: professional.id,
       professionalName: professional.name,
@@ -36,7 +47,7 @@ export function StepProfessional({ bookingData, updateBookingData }: StepProfess
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {availableProfessionals.map((professional) => {
+        {professionals.map((professional) => {
           const isSelected = bookingData.professionalId === professional.id
 
           return (
@@ -72,7 +83,7 @@ export function StepProfessional({ bookingData, updateBookingData }: StepProfess
         })}
       </div>
 
-      {availableProfessionals.length === 0 && (
+      {professionals.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
           <p>Nenhum profissional disponível para este serviço</p>
         </div>

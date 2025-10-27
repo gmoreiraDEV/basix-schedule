@@ -2,14 +2,18 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
-import { mockServices } from "@/lib/mock-data"
+
+interface Service {
+  id: string
+  name: string
+}
 
 interface ProfessionalFormProps {
   professional?: {
@@ -25,6 +29,7 @@ interface ProfessionalFormProps {
 export function ProfessionalForm({ professional, professionalServices = [] }: ProfessionalFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [services, setServices] = useState<Service[]>([])
   const [formData, setFormData] = useState({
     name: professional?.name || "",
     email: professional?.email || "",
@@ -32,6 +37,13 @@ export function ProfessionalForm({ professional, professionalServices = [] }: Pr
     active: professional?.active ?? true,
   })
   const [selectedServices, setSelectedServices] = useState<string[]>(professionalServices)
+
+  useEffect(() => {
+    fetch("/api/services")
+      .then((res) => res.json())
+      .then((data) => setServices(data))
+      .catch((err) => console.error("[v0] Error fetching services:", err))
+  }, [])
 
   const handleServiceToggle = (serviceId: string) => {
     setSelectedServices((prev) =>
@@ -43,11 +55,27 @@ export function ProfessionalForm({ professional, professionalServices = [] }: Pr
     e.preventDefault()
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const url = professional ? `/api/professionals/${professional.id}` : "/api/professionals"
+      const method = professional ? "PUT" : "POST"
 
-    console.log("[v0] Professional form submitted:", { ...formData, services: selectedServices })
-    router.push("/professionals")
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, services: selectedServices }),
+      })
+
+      if (response.ok) {
+        router.push("/professionals")
+      } else {
+        alert("Erro ao salvar profissional")
+      }
+    } catch (error) {
+      console.error("[v0] Error saving professional:", error)
+      alert("Erro ao salvar profissional")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -90,7 +118,7 @@ export function ProfessionalForm({ professional, professionalServices = [] }: Pr
       <div className="space-y-3">
         <Label>Serviços que o profissional realiza</Label>
         <div className="space-y-2 border border-border rounded-lg p-4">
-          {mockServices.map((service) => (
+          {services.map((service) => (
             <div key={service.id} className="flex items-center space-x-2">
               <Checkbox
                 id={`service-${service.id}`}

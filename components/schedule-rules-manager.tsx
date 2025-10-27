@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { mockProfessionals, mockScheduleRules } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
@@ -21,9 +20,23 @@ const DAYS_OF_WEEK = [
   { value: 6, label: "Sábado" },
 ]
 
+interface Professional {
+  id: string
+  name: string
+}
+
+interface ScheduleRule {
+  professionalId: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  active: boolean
+}
+
 export function ScheduleRulesManager() {
+  const [professionals, setProfessionals] = useState<Professional[]>([])
   const [selectedProfessional, setSelectedProfessional] = useState<string>("")
-  const [rules, setRules] = useState(mockScheduleRules)
+  const [rules, setRules] = useState<ScheduleRule[]>([])
   const [newRule, setNewRule] = useState({
     dayOfWeek: 1,
     startTime: "09:00",
@@ -31,9 +44,25 @@ export function ScheduleRulesManager() {
     active: true,
   })
 
+  useEffect(() => {
+    fetch("/api/professionals")
+      .then((res) => res.json())
+      .then((data) => setProfessionals(data))
+      .catch((err) => console.error("[v0] Error fetching professionals:", err))
+  }, [])
+
+  useEffect(() => {
+    if (selectedProfessional) {
+      fetch(`/api/schedule-rules?professionalId=${selectedProfessional}`)
+        .then((res) => res.json())
+        .then((data) => setRules(data))
+        .catch((err) => console.error("[v0] Error fetching schedule rules:", err))
+    }
+  }, [selectedProfessional])
+
   const professionalRules = rules.filter((r) => r.professionalId === selectedProfessional)
 
-  const handleAddRule = () => {
+  const handleAddRule = async () => {
     if (!selectedProfessional) return
 
     const ruleExists = rules.some((r) => r.professionalId === selectedProfessional && r.dayOfWeek === newRule.dayOfWeek)
@@ -43,26 +72,67 @@ export function ScheduleRulesManager() {
       return
     }
 
-    const rule = {
-      professionalId: selectedProfessional,
-      ...newRule,
+    try {
+      const response = await fetch("/api/schedule-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          professionalId: selectedProfessional,
+          ...newRule,
+        }),
+      })
+
+      if (response.ok) {
+        const savedRule = await response.json()
+        setRules([...rules, savedRule])
+      }
+    } catch (error) {
+      console.error("[v0] Error adding schedule rule:", error)
+      alert("Erro ao adicionar horário")
     }
-
-    setRules([...rules, rule])
-    console.log("[v0] Schedule rule added:", rule)
   }
 
-  const handleDeleteRule = (professionalId: string, dayOfWeek: number) => {
-    setRules(rules.filter((r) => !(r.professionalId === professionalId && r.dayOfWeek === dayOfWeek)))
-    console.log("[v0] Schedule rule deleted:", { professionalId, dayOfWeek })
+  const handleDeleteRule = async (professionalId: string, dayOfWeek: number) => {
+    try {
+      const response = await fetch(`/api/schedule-rules?professionalId=${professionalId}&dayOfWeek=${dayOfWeek}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setRules(rules.filter((r) => !(r.professionalId === professionalId && r.dayOfWeek === dayOfWeek)))
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting schedule rule:", error)
+      alert("Erro ao deletar horário")
+    }
   }
 
-  const handleToggleRule = (professionalId: string, dayOfWeek: number) => {
-    setRules(
-      rules.map((r) =>
-        r.professionalId === professionalId && r.dayOfWeek === dayOfWeek ? { ...r, active: !r.active } : r,
-      ),
-    )
+  const handleToggleRule = async (professionalId: string, dayOfWeek: number) => {
+    const rule = rules.find((r) => r.professionalId === professionalId && r.dayOfWeek === dayOfWeek)
+    if (!rule) return
+
+    try {
+      const response = await fetch("/api/schedule-rules", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          professionalId,
+          dayOfWeek,
+          active: !rule.active,
+        }),
+      })
+
+      if (response.ok) {
+        setRules(
+          rules.map((r) =>
+            r.professionalId === professionalId && r.dayOfWeek === dayOfWeek ? { ...r, active: !r.active } : r,
+          ),
+        )
+      }
+    } catch (error) {
+      console.error("[v0] Error toggling schedule rule:", error)
+      alert("Erro ao atualizar horário")
+    }
   }
 
   return (
@@ -75,7 +145,7 @@ export function ScheduleRulesManager() {
             <SelectValue placeholder="Escolha um profissional" />
           </SelectTrigger>
           <SelectContent>
-            {mockProfessionals.map((prof) => (
+            {professionals.map((prof) => (
               <SelectItem key={prof.id} value={prof.id}>
                 {prof.name}
               </SelectItem>

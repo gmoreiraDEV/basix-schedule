@@ -1,22 +1,49 @@
 "use client"
 
-import { useState } from "react"
-import { mockProfessionals, mockServiceProfessionals, mockServices } from "@/lib/mock-data"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+interface Professional {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  active: boolean
+  services: Array<{
+    id: string
+    name: string
+  }>
+}
+
 export function ProfessionalsTable() {
-  const [professionals] = useState(mockProfessionals)
+  const [professionals, setProfessionals] = useState<Professional[]>([])
 
-  const getProfessionalServices = (professionalId: string) => {
-    const serviceIds = mockServiceProfessionals
-      .filter((sp) => sp.professionalId === professionalId)
-      .map((sp) => sp.serviceId)
+  useEffect(() => {
+    fetch("/api/professionals")
+      .then((res) => res.json())
+      .then((data) => setProfessionals(data))
+      .catch((err) => console.error("[v0] Error fetching professionals:", err))
+  }, [])
 
-    return mockServices.filter((s) => serviceIds.includes(s.id))
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja deletar este profissional?")) return
+
+    try {
+      const response = await fetch(`/api/professionals/${id}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setProfessionals(professionals.filter((p) => p.id !== id))
+      }
+    } catch (error) {
+      console.error("[v0] Error deleting professional:", error)
+      alert("Erro ao deletar profissional")
+    }
   }
 
   return (
@@ -40,46 +67,43 @@ export function ProfessionalsTable() {
               </TableCell>
             </TableRow>
           ) : (
-            professionals.map((professional) => {
-              const services = getProfessionalServices(professional.id)
-              return (
-                <TableRow key={professional.id}>
-                  <TableCell className="font-medium">{professional.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{professional.email || "-"}</TableCell>
-                  <TableCell className="text-muted-foreground">{professional.phone || "-"}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {services.length === 0 ? (
-                        <span className="text-sm text-muted-foreground">Nenhum</span>
-                      ) : (
-                        services.map((service) => (
-                          <Badge key={service.id} variant="outline" className="text-xs">
-                            {service.name}
-                          </Badge>
-                        ))
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={professional.active ? "default" : "secondary"}>
-                      {professional.active ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/professionals/${professional.id}/edit`}>
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })
+            professionals.map((professional) => (
+              <TableRow key={professional.id}>
+                <TableCell className="font-medium">{professional.name}</TableCell>
+                <TableCell className="text-muted-foreground">{professional.email || "-"}</TableCell>
+                <TableCell className="text-muted-foreground">{professional.phone || "-"}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {professional.services.length === 0 ? (
+                      <span className="text-sm text-muted-foreground">Nenhum</span>
+                    ) : (
+                      professional.services.map((service) => (
+                        <Badge key={service.id} variant="outline" className="text-xs">
+                          {service.name}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={professional.active ? "default" : "secondary"}>
+                    {professional.active ? "Ativo" : "Inativo"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/professionals/${professional.id}/edit`}>
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(professional.id)}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
           )}
         </TableBody>
       </Table>

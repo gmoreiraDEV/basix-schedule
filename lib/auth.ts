@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import { db } from "@/lib/db"
 import bcrypt from "bcryptjs"
 import { SignJWT, jwtVerify } from "jose"
+import type { NextRequest } from "next/server"
 
 export interface AuthUser {
   id: string
@@ -30,6 +31,14 @@ async function verifyToken(token: string): Promise<AuthUser | null> {
   } catch {
     return null
   }
+}
+
+export async function verifyAuth(request: NextRequest): Promise<AuthUser | null> {
+  const token = request.cookies.get("auth-token")
+
+  if (!token) return null
+
+  return await verifyToken(token.value)
 }
 
 export async function register(
