@@ -1,0 +1,173 @@
+"use client"
+
+import { useState } from "react"
+import { mockBookings, mockServices, mockProfessionals } from "@/lib/mock-data"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Eye, XCircle } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Separator } from "@/components/ui/separator"
+
+export function BookingsTable() {
+  const [bookings, setBookings] = useState(mockBookings)
+  const [selectedBooking, setSelectedBooking] = useState<(typeof mockBookings)[0] | null>(null)
+
+  const handleCancelBooking = (bookingId: string) => {
+    setBookings((prev) => prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" } : b)))
+    console.log("[v0] Booking cancelled:", bookingId)
+  }
+
+  const formatDateTime = (date: Date) => {
+    return new Date(date).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(price)
+  }
+
+  return (
+    <>
+      <div className="rounded-md border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Cliente</TableHead>
+              <TableHead>Serviço</TableHead>
+              <TableHead>Profissional</TableHead>
+              <TableHead>Data/Hora</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {bookings.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  Nenhum agendamento encontrado
+                </TableCell>
+              </TableRow>
+            ) : (
+              bookings.map((booking) => {
+                const service = mockServices.find((s) => s.id === booking.serviceId)
+                const professional = mockProfessionals.find((p) => p.id === booking.professionalId)
+
+                return (
+                  <TableRow key={booking.id}>
+                    <TableCell className="font-medium">{booking.clientName}</TableCell>
+                    <TableCell className="text-muted-foreground">{service?.name || "-"}</TableCell>
+                    <TableCell className="text-muted-foreground">{professional?.name || "-"}</TableCell>
+                    <TableCell>{formatDateTime(booking.startTime)}</TableCell>
+                    <TableCell>
+                      <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
+                        {booking.status === "confirmed" ? "Confirmado" : "Cancelado"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(booking)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Detalhes do Agendamento</DialogTitle>
+                              <DialogDescription>Informações completas do agendamento</DialogDescription>
+                            </DialogHeader>
+                            {selectedBooking && (
+                              <div className="space-y-4">
+                                <div>
+                                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Cliente</h4>
+                                  <p className="text-foreground">{selectedBooking.clientName}</p>
+                                  {selectedBooking.clientEmail && (
+                                    <p className="text-sm text-muted-foreground">{selectedBooking.clientEmail}</p>
+                                  )}
+                                  {selectedBooking.clientPhone && (
+                                    <p className="text-sm text-muted-foreground">{selectedBooking.clientPhone}</p>
+                                  )}
+                                </div>
+                                <Separator />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Serviço</h4>
+                                    <p className="text-foreground">{service?.name}</p>
+                                    <p className="text-sm text-accent font-medium">
+                                      {service && formatPrice(service.price)}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Profissional</h4>
+                                    <p className="text-foreground">{professional?.name}</p>
+                                  </div>
+                                </div>
+                                <Separator />
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Início</h4>
+                                    <p className="text-foreground">{formatDateTime(selectedBooking.startTime)}</p>
+                                  </div>
+                                  <div>
+                                    <h4 className="text-sm font-medium text-muted-foreground mb-1">Término</h4>
+                                    <p className="text-foreground">{formatDateTime(selectedBooking.endTime)}</p>
+                                  </div>
+                                </div>
+                                {selectedBooking.notes && (
+                                  <>
+                                    <Separator />
+                                    <div>
+                                      <h4 className="text-sm font-medium text-muted-foreground mb-1">Observações</h4>
+                                      <p className="text-foreground">{selectedBooking.notes}</p>
+                                    </div>
+                                  </>
+                                )}
+                                <Separator />
+                                <div>
+                                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
+                                  <Badge variant={selectedBooking.status === "confirmed" ? "default" : "secondary"}>
+                                    {selectedBooking.status === "confirmed" ? "Confirmado" : "Cancelado"}
+                                  </Badge>
+                                </div>
+                              </div>
+                            )}
+                          </DialogContent>
+                        </Dialog>
+                        {booking.status === "confirmed" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCancelBooking(booking.id)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </>
+  )
+}
