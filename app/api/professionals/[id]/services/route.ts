@@ -1,39 +1,30 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
-import { requireAuth } from "@/lib/auth"
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 
-export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET() {
   try {
-    const user = await requireAuth()
-    const { id } = await params
+    const user = await requireAuth();
 
-    // Verify professional belongs to user's organization
-    const professional = await db.professional.findUnique({
-      where: { id },
-    })
-
-    if (!professional || professional.organizationId !== user.organizationId) {
-      return NextResponse.json({ error: "Professional not found" }, { status: 404 })
-    }
-
-    // Get services for this professional
-    const serviceProfessionals = await db.serviceProfessional.findMany({
-      where: { professionalId: id },
+    const professionals = await prisma.professional.findMany({
+      where: { organizationId: user.organizationId },
       include: {
-        service: {
-          where: {
-            active: true,
-            organizationId: user.organizationId,
+        services: {
+          select: {
+            service: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
-    })
+    });
 
-    const services = serviceProfessionals.map((sp) => sp.service)
-
-    return NextResponse.json({ services })
+    return NextResponse.json(professionals);
   } catch (error) {
-    console.error("[v0] Professional services API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] Error fetching professionals:", error);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }

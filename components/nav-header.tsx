@@ -1,24 +1,31 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { logout } from "@/lib/auth"
-import { Calendar, Users, Briefcase, Settings, LogOut, Clock } from "lucide-react"
-import Link from "next/link"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { logout } from "@/lib/auth";
+import {
+  Calendar,
+  Users,
+  Briefcase,
+  Settings,
+  LogOut,
+  Clock,
+} from "lucide-react";
+import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface NavHeaderProps {
-  userName: string
+  userName: string;
 }
 
 export function NavHeader({ userName }: NavHeaderProps) {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleLogout = async () => {
-    await logout()
-    router.push("/login")
-    router.refresh()
-  }
+    await logout();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <header className="border-b border-border bg-card">
@@ -27,7 +34,9 @@ export function NavHeader({ userName }: NavHeaderProps) {
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Calendar className="h-6 w-6 text-accent" />
-              <h1 className="text-xl font-bold text-foreground">Basix Schedule</h1>
+              <h1 className="text-xl font-bold text-foreground">
+                Basix Schedule
+              </h1>
             </Link>
             <nav className="hidden md:flex items-center gap-1">
               <Button variant="ghost" size="sm" asChild>
@@ -37,25 +46,25 @@ export function NavHeader({ userName }: NavHeaderProps) {
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/bookings">
+                <Link href="/dashboard/bookings">
                   <Clock className="h-4 w-4 mr-2" />
                   Agendamentos
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/services">
+                <Link href="/dashboard/services">
                   <Briefcase className="h-4 w-4 mr-2" />
                   Serviços
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/professionals">
+                <Link href="/dashboard/professionals">
                   <Users className="h-4 w-4 mr-2" />
                   Profissionais
                 </Link>
               </Button>
               <Button variant="ghost" size="sm" asChild>
-                <Link href="/settings">
+                <Link href="/dashboard/settings">
                   <Settings className="h-4 w-4 mr-2" />
                   Configurações
                 </Link>
@@ -64,7 +73,9 @@ export function NavHeader({ userName }: NavHeaderProps) {
           </div>
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            <span className="text-sm text-muted-foreground hidden sm:inline">{userName}</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">
+              {userName}
+            </span>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4 mr-2" />
               Sair
@@ -73,5 +84,5 @@ export function NavHeader({ userName }: NavHeaderProps) {
         </div>
       </div>
     </header>
-  )
+  );
 }
