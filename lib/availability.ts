@@ -88,3 +88,33 @@ export async function getAvailableSlots(
 
   return slots;
 }
+export async function getAvailableDates(
+  professionalId: string,
+  daysAhead = 30
+): Promise<string[]> {
+  const dates: string[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Get all schedule rules for this professional
+  const scheduleRules = await db.scheduleRule.findMany({
+    where: {
+      professionalId,
+      active: true,
+    },
+  });
+
+  const activeDays = new Set(scheduleRules.map((rule) => rule.dayOfWeek));
+
+  for (let i = 0; i < daysAhead; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    const dayOfWeek = date.getDay();
+
+    if (activeDays.has(dayOfWeek)) {
+      dates.push(date.toISOString().split("T")[0]);
+    }
+  }
+
+  return dates;
+}
