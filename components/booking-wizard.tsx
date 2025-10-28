@@ -1,33 +1,33 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
-import { StepService } from "@/components/booking-wizard/step-service"
-import { StepProfessional } from "@/components/booking-wizard/step-professional"
-import { StepDateTime } from "@/components/booking-wizard/step-datetime"
-import { StepConfirmation } from "@/components/booking-wizard/step-confirmation"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { StepService } from "@/components/booking-wizard/step-service";
+import { StepProfessional } from "@/components/booking-wizard/step-professional";
+import { StepDateTime } from "@/components/booking-wizard/step-datetime";
+import { StepConfirmation } from "@/components/booking-wizard/step-confirmation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export interface BookingData {
-  serviceId: string
-  serviceName: string
-  serviceDuration: number
-  servicePrice: number
-  professionalId: string
-  professionalName: string
-  date: Date | null
-  time: string
-  clientName: string
-  clientEmail: string
-  clientPhone: string
-  notes: string
+  serviceId: string;
+  serviceName: string;
+  serviceDuration: number;
+  servicePrice: number;
+  professionalId: string;
+  professionalName: string;
+  date: Date | null;
+  time: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  notes: string;
 }
 
 export function BookingWizard() {
-  const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
+  const router = useRouter();
+  const [currentStep, setCurrentStep] = useState(1);
   const [bookingData, setBookingData] = useState<BookingData>({
     serviceId: "",
     serviceName: "",
@@ -41,48 +41,76 @@ export function BookingWizard() {
     clientEmail: "",
     clientPhone: "",
     notes: "",
-  })
+  });
 
-  const totalSteps = 4
-  const progress = (currentStep / totalSteps) * 100
+  const totalSteps = 4;
+  const progress = (currentStep / totalSteps) * 100;
 
   const canGoNext = () => {
     switch (currentStep) {
       case 1:
-        return bookingData.serviceId !== ""
+        return bookingData.serviceId !== "";
       case 2:
-        return bookingData.professionalId !== ""
+        return bookingData.professionalId !== "";
       case 3:
-        return bookingData.date !== null && bookingData.time !== ""
+        return bookingData.date !== null && bookingData.time !== "";
       case 4:
-        return bookingData.clientName !== "" && bookingData.clientPhone !== ""
+        return bookingData.clientName !== "" && bookingData.clientPhone !== "";
       default:
-        return false
+        return false;
     }
-  }
+  };
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
-  }
+  };
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
   const handleSubmit = async () => {
-    console.log("[v0] Booking submitted:", bookingData)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    router.push("/bookings")
-  }
+    if (!bookingData.date || !bookingData.time) return;
+
+    const startTimeISO = new Date(
+      `${bookingData.date.toISOString().split("T")[0]}T${bookingData.time}:00`
+    ).toISOString();
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceId: bookingData.serviceId,
+          professionalId: bookingData.professionalId,
+          clientName: bookingData.clientName,
+          clientEmail: bookingData.clientEmail,
+          clientPhone: bookingData.clientPhone,
+          notes: bookingData.notes,
+          startTime: startTimeISO,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("[v0] Booking error:", await response.json());
+        alert("Erro ao confirmar agendamento.");
+        return;
+      }
+
+      router.push("/dashboard/bookings"); // ✅ redireciona depois de criar
+    } catch (error) {
+      console.error("[v0] Network error:", error);
+      alert("Erro ao conectar com o servidor.");
+    }
+  };
 
   const updateBookingData = (data: Partial<BookingData>) => {
-    setBookingData((prev) => ({ ...prev, ...data }))
-  }
+    setBookingData((prev) => ({ ...prev, ...data }));
+  };
 
   return (
     <div className="space-y-6">
@@ -108,27 +136,55 @@ export function BookingWizard() {
           <div key={step.num} className="flex flex-col items-center gap-2">
             <div
               className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                currentStep >= step.num ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                currentStep >= step.num
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {step.num}
             </div>
-            <span className="text-xs text-muted-foreground hidden sm:inline">{step.label}</span>
+            <span className="text-xs text-muted-foreground hidden sm:inline">
+              {step.label}
+            </span>
           </div>
         ))}
       </div>
 
       {/* Step Content */}
       <div className="min-h-[400px] py-6">
-        {currentStep === 1 && <StepService bookingData={bookingData} updateBookingData={updateBookingData} />}
-        {currentStep === 2 && <StepProfessional bookingData={bookingData} updateBookingData={updateBookingData} />}
-        {currentStep === 3 && <StepDateTime bookingData={bookingData} updateBookingData={updateBookingData} />}
-        {currentStep === 4 && <StepConfirmation bookingData={bookingData} updateBookingData={updateBookingData} />}
+        {currentStep === 1 && (
+          <StepService
+            bookingData={bookingData}
+            updateBookingData={updateBookingData}
+          />
+        )}
+        {currentStep === 2 && (
+          <StepProfessional
+            bookingData={bookingData}
+            updateBookingData={updateBookingData}
+          />
+        )}
+        {currentStep === 3 && (
+          <StepDateTime
+            bookingData={bookingData}
+            updateBookingData={updateBookingData}
+          />
+        )}
+        {currentStep === 4 && (
+          <StepConfirmation
+            bookingData={bookingData}
+            updateBookingData={updateBookingData}
+          />
+        )}
       </div>
 
       {/* Navigation Buttons */}
       <div className="flex items-center justify-between pt-6 border-t border-border">
-        <Button variant="outline" onClick={handleBack} disabled={currentStep === 1}>
+        <Button
+          variant="outline"
+          onClick={handleBack}
+          disabled={currentStep === 1}
+        >
           <ChevronLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
@@ -145,5 +201,5 @@ export function BookingWizard() {
         )}
       </div>
     </div>
-  )
+  );
 }

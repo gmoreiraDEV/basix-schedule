@@ -1,65 +1,72 @@
-"use client"
+"use client";
 
-import type { BookingData } from "@/components/booking-wizard"
-import { useState, useEffect } from "react"
-import { Calendar } from "@/components/ui/calendar"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Check, Loader2 } from "lucide-react"
-import type { TimeSlot } from "@/lib/availability"
+import type { BookingData } from "@/components/booking-wizard";
+import { useState, useEffect } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Check, Loader2 } from "lucide-react";
+import type { TimeSlot } from "@/lib/availability";
 
 interface StepDateTimeProps {
-  bookingData: BookingData
-  updateBookingData: (data: Partial<BookingData>) => void
+  bookingData: BookingData;
+  updateBookingData: (data: Partial<BookingData>) => void;
 }
 
-export function StepDateTime({ bookingData, updateBookingData }: StepDateTimeProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(bookingData.date || undefined)
-  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([])
-  const [loading, setLoading] = useState(false)
+export function StepDateTime({
+  bookingData,
+  updateBookingData,
+}: StepDateTimeProps) {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    bookingData.date || undefined
+  );
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (selectedDate && bookingData.professionalId && bookingData.serviceId) {
-      fetchAvailableSlots()
+      fetchAvailableSlots();
     }
-  }, [selectedDate])
+  }, [selectedDate]);
 
   const fetchAvailableSlots = async () => {
-    if (!selectedDate) return
+    if (!selectedDate) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
       const params = new URLSearchParams({
         professionalId: bookingData.professionalId,
         serviceId: bookingData.serviceId,
         date: selectedDate.toISOString(),
-      })
+      });
 
-      const response = await fetch(`/api/availability?${params}`)
-      const data = await response.json()
+      const response = await fetch(`/api/availability?${params}`);
+      const data = await response.json();
 
-      setAvailableSlots(data.slots || [])
+      setAvailableSlots(data.slots || []);
     } catch (error) {
-      console.error("[v0] Error fetching slots:", error)
-      setAvailableSlots([])
+      console.error("[v0] Error fetching slots:", error);
+      setAvailableSlots([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleDateSelect = (date: Date | undefined) => {
-    setSelectedDate(date)
-    updateBookingData({ date: date || null, time: "" })
-  }
+    setSelectedDate(date);
+    updateBookingData({ date: date || null, time: "" });
+  };
 
   const handleTimeSelect = (time: string) => {
-    updateBookingData({ time })
-  }
+    updateBookingData({ time });
+  };
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-2">Selecione Data e Horário</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-2">
+          Selecione Data e Horário
+        </h3>
         <p className="text-sm text-muted-foreground">
           Profissional: <strong>{bookingData.professionalName}</strong>
         </p>
@@ -80,7 +87,9 @@ export function StepDateTime({ bookingData, updateBookingData }: StepDateTimePro
 
         {/* Time Slots */}
         <Card className="p-4">
-          <h4 className="font-medium text-foreground mb-4">Escolha o Horário</h4>
+          <h4 className="font-medium text-foreground mb-4">
+            Escolha o Horário
+          </h4>
 
           {!selectedDate ? (
             <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
@@ -97,9 +106,9 @@ export function StepDateTime({ bookingData, updateBookingData }: StepDateTimePro
           ) : (
             <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto">
               {availableSlots.map((slot) => {
-                const isSelected = bookingData.time === slot.time
-                const isAvailable = slot.available
-
+                const isSelected = bookingData.time === slot.time;
+                const isAvailable = slot.available;
+                console.log(isAvailable);
                 return (
                   <Button
                     key={slot.time}
@@ -107,17 +116,17 @@ export function StepDateTime({ bookingData, updateBookingData }: StepDateTimePro
                     size="sm"
                     disabled={!isAvailable}
                     onClick={() => handleTimeSelect(slot.time)}
-                    className="relative"
+                    className="relative text-white"
                   >
                     {isSelected && <Check className="h-3 w-3 mr-1" />}
                     {slot.time}
                   </Button>
-                )
+                );
               })}
             </div>
           )}
         </Card>
       </div>
     </div>
-  )
+  );
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { BookingData } from "@/components/booking-wizard";
+import { Card } from "@/components/ui/card";
+import { Check, User } from "lucide-react";
 
 interface Professional {
   id: string;
@@ -57,8 +59,7 @@ export function StepProfessional({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <pre>{JSON.stringify(professionals, null, 2)}</pre>{" "}
-        {/* {professionals.map((professional) => {
+        {professionals.map((professional) => {
           const isSelected = bookingData.professionalId === professional.id;
 
           return (
@@ -101,7 +102,7 @@ export function StepProfessional({
               </div>
             </Card>
           );
-        })} */}
+        })}
       </div>
 
       {professionals.length === 0 && (
